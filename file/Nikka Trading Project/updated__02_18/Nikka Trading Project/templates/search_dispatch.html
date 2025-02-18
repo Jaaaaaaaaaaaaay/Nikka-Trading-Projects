@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search Dispatch by Date</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    .container {
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #f4f4f4;
+      display: inline-block;
+      text-align: left;
+      width: 80%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid black;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    .no-results {
+      color: red;
+      font-weight: bold;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .blue-btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      margin-top: 10px;
+      display: inline-block;
+    }
+    .blue-btn:hover {
+      background-color: #0056b3;
+    }
+    .blue-btn:disabled {
+      background-color: gray;
+      cursor: not-allowed;
+    }
+    .clear-btn {
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .clear-btn:hover {
+      background-color: darkred;
+    }
+    .home-button {
+      margin-top: 20px;
+      background-color: #28a745;
+    }
+    .home-button:hover {
+      background-color: #218838;
+    }
+  </style>
+
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', storeCheckedSchools);
+    });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    let startDateInput = document.getElementById("start_date");
+    let endDateInput = document.getElementById("end_date");
+
+    startDateInput.addEventListener("change", function () {
+        let startDate = startDateInput.value;
+        endDateInput.setAttribute("min", startDate);
+        
+        // If end date is earlier than start date, reset it
+        if (endDateInput.value < startDate) {
+            endDateInput.value = startDate;
+        }
+    });
+
+    endDateInput.addEventListener("change", function () {
+        let startDate = startDateInput.value;
+        let endDate = endDateInput.value;
+
+        if (endDate < startDate) {
+            alert("End date cannot be earlier than the start date.");
+            endDateInput.value = startDate;
+        }
+    });
+          // Auto-submit form when date changes
+          startDateInput.addEventListener("change", function () {
+        document.getElementById("filterForm").submit();
+      });
+      endDateInput.addEventListener("change", function () {
+        document.getElementById("filterForm").submit();
+      });
+});
+
+
+    function toggleCheckLotButton() {
+      const checkboxes = document.querySelectorAll(".school-checkbox");
+      const checkLotButton = document.getElementById("checkLotButton");
+      const isChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+      checkLotButton.disabled = !isChecked;
+    }
+
+    function clearFilters() {
+      document.getElementById("search_school_id").value = "";
+      document.getElementById("search_school_name").value = "";
+      document.getElementById("region_name").value = "";
+      document.getElementById("division_name").value = "";
+      document.getElementById("plan_batch_no").value = "";
+      document.getElementById("filterForm").submit();
+    }
+
+
+  function storeCheckedSchools() {
+    let checkedSchools = [];
+    document.querySelectorAll('.school-checkbox:checked').forEach(checkbox => {
+        checkedSchools.push(checkbox.value);
+    });
+
+    fetch('/save_selected_schools', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ selected_schools: checkedSchools })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Server response:', data);
+        if (data.status === 'success') {
+            // Update button state
+            document.getElementById('checkLotButton').disabled = checkedSchools.length === 0;
+        }
+    })
+    .catch(error => {
+        console.error('Error saving schools:', error);
+    });
+}
+    
+    console.log('Attempting to store schools:', checkedSchools);  // Debug log
+    
+    fetch('/save_selected_schools', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ selected_schools: checkedSchools })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Server response:', data);  // Debug log
+        if (data.status === 'success') {
+            // Update button state
+            document.getElementById('checkLotButton').disabled = checkedSchools.length === 0;
+            
+            // Optional: Update UI to show number of selected schools
+            const selectedCount = document.getElementById('selectedCount');
+            if (selectedCount) {
+                selectedCount.textContent = `Selected schools: ${data.count}`;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error saving schools:', error);
+    });
+
+
+// Function to restore checked state when page loads
+function restoreCheckedState() {
+    fetch('/get_selected_schools')
+        .then(response => response.json())
+        .then(data => {
+            const selectedSchools = new Set(data.selected_schools);
+            document.querySelectorAll('.school-checkbox').forEach(checkbox => {
+                checkbox.checked = selectedSchools.has(checkbox.value);
+            });
+            // Update button state
+            document.getElementById('checkLotButton').disabled = selectedSchools.size === 0;
+        });
+}
+
+// Add event listeners when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add change handler to all checkboxes
+    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', storeCheckedSchools);
+    });
+    
+    // Add change handler to select all checkbox
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            document.querySelectorAll('.school-checkbox').forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            storeCheckedSchools();
+        });
+    }
+    
+    // Restore checked state
+    restoreCheckedState();
+});
+
+
+// Add these event listeners after your document loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handler to all checkboxes
+    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            storeCheckedSchools();
+        });
+    });
+});
+
+
+    function restoreCheckedSchools() {
+      const checkedSchools = JSON.parse(localStorage.getItem("checkedSchools")) || [];
+      document.querySelectorAll(".school-checkbox").forEach(checkbox => {
+        if (checkedSchools.includes(checkbox.value)) {
+          checkbox.checked = true;
+        }
+      });
+    }
+
+    function clearAllSelections() {
+      document.querySelectorAll(".school-checkbox").forEach(checkbox => checkbox.checked = false);
+      document.getElementById("checkLotButton").disabled = true;
+      localStorage.removeItem("checkedSchools");
+    }
+
+    function resetSelections() {
+      localStorage.removeItem("checkedSchools");
+      location.href = "/search_dispatch";
+    }
+
+    function toggleSelectAll() {
+      const selectAllCheckbox = document.getElementById("selectAll");
+      const checkboxes = document.querySelectorAll(".school-checkbox");
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+      });
+      toggleCheckLotButton();
+      storeCheckedSchools();
+    }
+    window.onload = setDateRestrictions;
+    document.addEventListener("DOMContentLoaded", function() {
+        let startDateInput = document.getElementById("start_date");
+        let endDateInput = document.getElementById("end_date");
+
+        function fetchDropdownOptions() {
+            let startDate = startDateInput.value;
+            let endDate = endDateInput.value;
+
+            if (!startDate || !endDate) return;  // Prevent empty requests
+
+            fetch("/get_dispatch_options", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ start_date: startDate, end_date: endDate })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateDropdown("region", data.region_options);
+                updateDropdown("division", data.division_options);
+                updateDropdown("plan_batch", data.plan_batch_options);
+            })
+            .catch(error => console.error("Error fetching dropdown data:", error));
+        }
+
+        function updateDropdown(dropdownId, options) {
+            let dropdown = document.getElementById(dropdownId);
+            dropdown.innerHTML = '<option value="">Select ' + dropdownId.replace("_", " ") + '</option>';
+            options.forEach(option => {
+                let newOption = document.createElement("option");
+                newOption.value = option;
+                newOption.textContent = option;
+                dropdown.appendChild(newOption);
+            });
+        }
+
+        startDateInput.addEventListener("change", fetchDropdownOptions);
+        endDateInput.addEventListener("change", fetchDropdownOptions);
+    }); 
+  </script>
+</head>
+<body>
+  <h1>Search Dispatch by Date</h1>
+
+  <!-- Top bar with Return to Search (if needed) -->
+  <div class="top-bar">
+    <button class="home-button" onclick="location.href='/'">Return to Home</button>
+  </div>
+
+  <div class="container">
+    <h3>Selected Date Range:</h3>
+
+    <!-- Filter Form -->
+    <form method="POST" action="/search_dispatch" id="filterForm" onsubmit="storeCheckedSchools()">
+      <label for="start_date">Start Date:</label>
+      <input type="date" id="start_date" name="start_date" value="{{ start_date }}" required>
+
+      <label for="end_date">End Date:</label>
+      <input type="date" id="end_date" name="end_date" value="{{ end_date }}" required>
+
+<label for="region_name">Filter by Region:</label>
+<select name="region_name" id="region_name" onchange="storeCheckedSchools(); this.form.submit();">
+    <option value="">All Regions</option>
+    {% for region in region_options %}
+      <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>{{ region }}</option>
+    {% endfor %}
+</select>
+
+<label for="division_name">Filter by Division:</label>
+<select name="division_name" id="division_name" onchange="storeCheckedSchools(); this.form.submit();">
+    <option value="">All Divisions</option>
+    {% for division in division_options %}
+      <option value="{{ division }}" {% if division == selected_division %}selected{% endif %}>{{ division }}</option>
+    {% endfor %}
+</select>
+
+<label for="plan_batch_no">Filter by Plan Batch No:</label>
+<select name="plan_batch_no" id="plan_batch_no" onchange="storeCheckedSchools(); this.form.submit();">
+    <option value="">All Plan Batches</option>
+    {% for batch in plan_batch_options %}
+      <option value="{{ batch }}" {% if batch == selected_plan_batch %}selected{% endif %}>{{ batch }}</option>
+    {% endfor %}
+</select>
+
+
+      <br /><br />
+
+      <label for="search_school_id">School ID:</label>
+      <input type="text" id="search_school_id" name="search_school_id" value="{{ search_school_id }}">
+
+      <label for="search_school_name">School Name:</label>
+      <input type="text" id="search_school_name" name="search_school_name" value="{{ search_school_name }}">
+
+      <button type="submit">Search</button>
+      <button type="button" class="clear-btn" onclick="clearFilters()">Clear All Filters</button>
+    </form>
+
+    {% if dispatch_records %}
+      <h3>Matching Schools:</h3>
+      <div class="top-bar">
+        <button id="checkLotButton" class="blue-btn" onclick="location.href='/check_lot_availability'" disabled>
+          Check Lot Availability
+      </button>
+        <button class="clear-btn" onclick="clearAllSelections()">Clear All Selected</button>
+      </div>
+
+      <table>
+        <tr>
+          <th>
+            <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
+            Select All
+          </th>
+          <th>Region Name</th>
+          <th>Division Name</th>
+          <th>School ID</th>
+          <th>School Name</th>
+          <th>Dispatched Date</th>
+          <th>Plan Batch No</th>
+        </tr>
+        {% for record in dispatch_records %}
+          <tr>
+            <td>
+              <input type="checkbox" class="school-checkbox" value="{{ record['school_id'] }}" onclick="toggleCheckLotButton(); storeCheckedSchools();">
+            </td>
+            <td>{{ record["region_name"] }}</td>
+            <td>{{ record["division_name"] }}</td>
+            <td>{{ record["school_id"] }}</td>
+            <td>{{ record["school_name"] }}</td>
+            <td>{{ record["dispatched_date"] }}</td>
+            <td>{{ record["plan_batch_no"] }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="no-results">No schools found within the selected filters.</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>

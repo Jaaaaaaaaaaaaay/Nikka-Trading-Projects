@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lot Availability</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #007bff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h3 {
+            font-size: 22px;
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        ul li {
+            background: #f8f9fa;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .no-data h3 {
+            color: #dc3545;
+        }
+
+        .no-data p {
+            color: #666;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .lot-checklist {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .lot-checklist label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lot Availability for Selected Schools</h1>
+
+        <!-- Display Selected School IDs -->
+        <h3>Selected School IDs:</h3>
+        <ul>
+            {% for school_id in selected_schools %}
+                <li>{{ school_id }}</li>
+            {% endfor %}
+        </ul>
+
+        <!-- Display Lot Availability Information -->
+        {% if lot_records %}
+            <h3>Lot Availability:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>School ID</th>
+                        <th>School Name</th>
+                        <th>Region</th>
+                        <th>Division</th>
+                        <th>Allocated Lots</th>
+                        <th>Lot Checklist</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in lot_records %}
+                        <tr>
+                            <td>{{ record.school_id }}</td>
+                            <td>{{ record.school_name }}</td>
+                            <td>{{ record.region_name }}</td>
+                            <td>{{ record.division_name }}</td>
+                            <td>{{ record.allocated_lots_numbers or 'No lots allocated' }}</td>
+                            <td>
+                                <div class="lot-checklist">
+                                    {% set allocated_lots = record.allocated_lots_numbers.split(', ') if record.allocated_lots_numbers else [] %}
+                                    {% for lot in [6, 7, 8, 9, 10, 11, 13, 14] %}
+                                        <label>
+                                            <input type="checkbox" 
+                                                   name="lot_{{ lot }}" 
+                                                   {% if lot|string in allocated_lots %}checked{% endif %}
+                                                   {% if lot|string not in allocated_lots %}disabled{% endif %}>
+                                            Lot {{ lot }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="no-data">
+                <h3>No schools selected</h3>
+                <p>Please return to the search page and select schools to view their lot availability.</p>
+            </div>
+        {% endif %}
+
+        <!-- Buttons -->
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="location.href='/search_dispatch'">Back to Search</button>
+            <button class="btn btn-danger" onclick="clearSelections()">Clear All Selections</button>
+        </div>
+    </div>
+
+    <script>
+        function clearSelections() {
+            fetch('/clear_selections', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();  // Refresh the page
+                }
+            });
+        }
+    </script>
+</body>
+</html>
