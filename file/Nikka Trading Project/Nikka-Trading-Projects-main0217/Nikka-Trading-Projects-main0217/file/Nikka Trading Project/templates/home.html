@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .option {
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-decoration: none;
+            background-color: #f4f4f4;
+            color: black;
+        }
+        .option:hover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Lot Finder</h1>
+    <p>Select an option below:</p>
+    
+    <div class="container">
+        <a href="/input" class="option">Search by Lot Availability</a>
+        <a href="/search_dispatch" class="option">Search by Dispatch Date</a>
+    </div>
+</body>
+</html>

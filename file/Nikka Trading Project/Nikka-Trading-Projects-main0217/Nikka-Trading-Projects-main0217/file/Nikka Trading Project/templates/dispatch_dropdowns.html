@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search Dispatch by Date</title>
+  <title>Filtered Dispatch Records</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -70,53 +70,36 @@
     .clear-btn:hover {
       background-color: darkred;
     }
-    .home-button {
-      margin-top: 20px;
-      background-color: #28a745;
-    }
-    .home-button:hover {
-      background-color: #218838;
-    }
   </style>
 
+  <!-- All scripts go here -->
   <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', storeCheckedSchools);
-    });
-});
+    
 
-document.addEventListener("DOMContentLoaded", function () {
+        // Function to set date restrictions
+    function setDateRestrictions() {
+        let today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+        document.getElementById("start_date").setAttribute("max", today);
+        document.getElementById("end_date").setAttribute("max", today);
+
+      // Ensure the end date can't be before the start date
+      document.getElementById("start_date").addEventListener("change", function () {
+        let startDate = this.value;
+        document.getElementById("end_date").setAttribute("min", startDate);
+      });
+    }
+    document.addEventListener("DOMContentLoaded", function () {
     let startDateInput = document.getElementById("start_date");
     let endDateInput = document.getElementById("end_date");
 
-    startDateInput.addEventListener("change", function () {
-        let startDate = startDateInput.value;
-        endDateInput.setAttribute("min", startDate);
-        
-        // If end date is earlier than start date, reset it
-        if (endDateInput.value < startDate) {
-            endDateInput.value = startDate;
-        }
-    });
+    function fetchAndSubmit() {
+        document.getElementById("filterForm").submit(); // Auto-submit form
+    }
 
-    endDateInput.addEventListener("change", function () {
-        let startDate = startDateInput.value;
-        let endDate = endDateInput.value;
-
-        if (endDate < startDate) {
-            alert("End date cannot be earlier than the start date.");
-            endDateInput.value = startDate;
-        }
-    });
-          // Auto-submit form when date changes
-          startDateInput.addEventListener("change", function () {
-        document.getElementById("filterForm").submit();
-      });
-      endDateInput.addEventListener("change", function () {
-        document.getElementById("filterForm").submit();
-      });
+    startDateInput.addEventListener("change", fetchAndSubmit);
+    endDateInput.addEventListener("change", fetchAndSubmit);
 });
+
 
 
     function toggleCheckLotButton() {
@@ -127,116 +110,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function clearFilters() {
-      document.getElementById("search_school_id").value = "";
-      document.getElementById("search_school_name").value = "";
-      document.getElementById("region_name").value = "";
-      document.getElementById("division_name").value = "";
-      document.getElementById("plan_batch_no").value = "";
-      document.getElementById("filterForm").submit();
+        // Clear text inputs
+        document.getElementById("search_school_id").value = "";
+        document.getElementById("search_school_name").value = "";
+
+        // Reset dropdowns to 'All' options
+        document.getElementById("region_name").value = "";
+        document.getElementById("division_name").value = "";
+        document.getElementById("plan_batch_no").value = "";
+
+        // Submit the form with existing date range
+        document.getElementById("filterForm").submit();
     }
 
-
-  function storeCheckedSchools() {
-    let checkedSchools = [];
-    document.querySelectorAll('.school-checkbox:checked').forEach(checkbox => {
+    function storeCheckedSchools() {
+      let checkedSchools = [];
+      document.querySelectorAll(".school-checkbox:checked").forEach(checkbox => {
         checkedSchools.push(checkbox.value);
-    });
-
-    fetch('/save_selected_schools', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ selected_schools: checkedSchools })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Server response:', data);
-        if (data.status === 'success') {
-            // Update button state
-            document.getElementById('checkLotButton').disabled = checkedSchools.length === 0;
-        }
-    })
-    .catch(error => {
-        console.error('Error saving schools:', error);
-    });
-}
-    
-    console.log('Attempting to store schools:', checkedSchools);  // Debug log
-    
-    fetch('/save_selected_schools', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ selected_schools: checkedSchools })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Server response:', data);  // Debug log
-        if (data.status === 'success') {
-            // Update button state
-            document.getElementById('checkLotButton').disabled = checkedSchools.length === 0;
-            
-            // Optional: Update UI to show number of selected schools
-            const selectedCount = document.getElementById('selectedCount');
-            if (selectedCount) {
-                selectedCount.textContent = `Selected schools: ${data.count}`;
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error saving schools:', error);
-    });
-
-
-// Function to restore checked state when page loads
-function restoreCheckedState() {
-    fetch('/get_selected_schools')
-        .then(response => response.json())
-        .then(data => {
-            const selectedSchools = new Set(data.selected_schools);
-            document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-                checkbox.checked = selectedSchools.has(checkbox.value);
-            });
-            // Update button state
-            document.getElementById('checkLotButton').disabled = selectedSchools.size === 0;
-        });
-}
-
-// Add event listeners when document loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Add change handler to all checkboxes
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', storeCheckedSchools);
-    });
-    
-    // Add change handler to select all checkbox
-    const selectAllCheckbox = document.getElementById('selectAll');
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-                checkbox.checked = selectAllCheckbox.checked;
-            });
-            storeCheckedSchools();
-        });
+      });
+      localStorage.setItem("checkedSchools", JSON.stringify(checkedSchools));
     }
-    
-    // Restore checked state
-    restoreCheckedState();
-});
-
-
-// Add these event listeners after your document loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Add click handler to all checkboxes
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            storeCheckedSchools();
-        });
-    });
-});
-
 
     function restoreCheckedSchools() {
       const checkedSchools = JSON.parse(localStorage.getItem("checkedSchools")) || [];
@@ -255,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function resetSelections() {
       localStorage.removeItem("checkedSchools");
+      // If you don't want to navigate away on "Return to Search", you can remove this line.
       location.href = "/search_dispatch";
     }
 
@@ -309,11 +203,11 @@ document.addEventListener('DOMContentLoaded', function() {
   </script>
 </head>
 <body>
-  <h1>Search Dispatch by Date</h1>
+  <h1>Dispatch Records</h1>
 
   <!-- Top bar with Return to Search (if needed) -->
   <div class="top-bar">
-    <button class="home-button" onclick="location.href='/'">Return to Home</button>
+    <button onclick="resetSelections()">Return to Search</button>
   </div>
 
   <div class="container">
@@ -321,36 +215,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Filter Form -->
     <form method="POST" action="/search_dispatch" id="filterForm" onsubmit="storeCheckedSchools()">
-      <label for="start_date">Start Date:</label>
-      <input type="date" id="start_date" name="start_date" value="{{ start_date }}" required>
+      <input type="hidden" name="start_date" value="{{ start_date }}">
+      <input type="hidden" name="end_date" value="{{ end_date }}">
+      <form method="POST" action="/search_dispatch" id="filterForm">
+        <!-- Date Selection -->
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date }}" required>
+  
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" name="end_date" value="{{ end_date }}" required>
+        <br><br>
 
-      <label for="end_date">End Date:</label>
-      <input type="date" id="end_date" name="end_date" value="{{ end_date }}" required>
-
-<label for="region_name">Filter by Region:</label>
-<select name="region_name" id="region_name" onchange="storeCheckedSchools(); this.form.submit();">
-    <option value="">All Regions</option>
-    {% for region in region_options %}
-      <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>{{ region }}</option>
-    {% endfor %}
-</select>
-
-<label for="division_name">Filter by Division:</label>
-<select name="division_name" id="division_name" onchange="storeCheckedSchools(); this.form.submit();">
-    <option value="">All Divisions</option>
-    {% for division in division_options %}
-      <option value="{{ division }}" {% if division == selected_division %}selected{% endif %}>{{ division }}</option>
-    {% endfor %}
-</select>
-
-<label for="plan_batch_no">Filter by Plan Batch No:</label>
-<select name="plan_batch_no" id="plan_batch_no" onchange="storeCheckedSchools(); this.form.submit();">
-    <option value="">All Plan Batches</option>
-    {% for batch in plan_batch_options %}
-      <option value="{{ batch }}" {% if batch == selected_plan_batch %}selected{% endif %}>{{ batch }}</option>
-    {% endfor %}
-</select>
-
+      <label for="region_name">Filter by Region:</label>
+      <select name="region_name" id="region_name" onchange="storeCheckedSchools(); this.form.submit();">
+        <option value="">All Regions</option>
+        {% for region in region_options %}
+          <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>
+            {{ region }}
+          </option>
+        {% endfor %}
+      </select>
+      
+      <label for="division_name">Filter by Division:</label>
+      <select name="division_name" id="division_name" onchange="storeCheckedSchools(); this.form.submit();">
+        <option value="">All Divisions</option>
+        {% for division in division_options %}
+          <option value="{{ division }}" {% if division == selected_division %}selected{% endif %}>
+            {{ division }}
+          </option>
+        {% endfor %}
+      </select>
+      
+      <label for="plan_batch_no">Filter by Plan Batch No:</label>
+      <select name="plan_batch_no" id="plan_batch_no" onchange="storeCheckedSchools(); this.form.submit();">
+        <option value="">All Plan Batches</option>
+        {% for batch in plan_batch_options %}
+          <option value="{{ batch }}" {% if batch == selected_plan_batch %}selected{% endif %}>
+            {{ batch }}
+          </option>
+        {% endfor %}
+      </select>
+      
 
       <br /><br />
 
@@ -369,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="top-bar">
         <button id="checkLotButton" class="blue-btn" onclick="location.href='/check_lot_availability'" disabled>
           Check Lot Availability
-      </button>
+        </button>
         <button class="clear-btn" onclick="clearAllSelections()">Clear All Selected</button>
       </div>
 
@@ -404,6 +309,5 @@ document.addEventListener('DOMContentLoaded', function() {
       <p class="no-results">No schools found within the selected filters.</p>
     {% endif %}
   </div>
-
 </body>
 </html>

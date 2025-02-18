@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 import pandas as pd
 import os
-import warnings
 
 app = Flask(__name__)
 
@@ -9,34 +8,28 @@ app = Flask(__name__)
 LOT_DATA_FILE_PATH = "EPA - CIM Monitoring for lot.csv"
 DISPATCH_FILE_PATH = "EPA - CIM Monitoring for Dispatch.xlsx"
 
+# Load and clean the Dispatch Data
 def load_dispatch_data(file_path):
     try:
         df = pd.read_excel(file_path, dtype=str)
 
-        print("✅ Dispatch data loaded successfully!")
-        print(df.head())  # Debugging: Show the first few rows
-
-        # Rename columns
+        # Rename columns to meaningful names
         df.rename(columns={
-            'DISPATCHED DOCUMENTS': 'region_name',
-            'Unnamed: 1': 'division_name',
-            'Unnamed: 2': 'school_id',
-            'Unnamed: 3': 'school_name',
-            'Unnamed: 4': 'dispatched_date',
-            'Unnamed: 5': 'plan_batch_no'
+            'DISPATCHED DOCUMENTS': 'region_name',  # Region Name
+            'Unnamed: 1': 'division_name',          # Division Name
+            'Unnamed: 2': 'school_id',              # School ID
+            'Unnamed: 3': 'school_name',            # School Name
+            'Unnamed: 4': 'dispatched_date',        # Dispatched Date
+            'Unnamed: 5': 'plan_batch_no'           # Plan Batch No
         }, inplace=True)
 
-        # Convert 'dispatched_date' to datetime
-        df['dispatched_date'] = pd.to_datetime(df['dispatched_date'], errors='coerce')
+        # Convert 'dispatched_date' to datetime and remove time
+        df['dispatched_date'] = pd.to_datetime(df['dispatched_date'], errors='coerce').dt.date
 
-        print("📅 Dispatched Date column after conversion:")
-        print(df['dispatched_date'].head())  # Debugging: Check date column
-
-        return df.dropna(subset=['dispatched_date'])
+        return df.dropna(subset=['dispatched_date'])  # Remove invalid dates
     except Exception as e:
         print(f"❌ Error loading dispatch data: {e}")
         return pd.DataFrame()
-
 
 # Load and clean the lot data
 def load_and_clean_lot_data(file_path):
@@ -59,9 +52,6 @@ def load_and_clean_lot_data(file_path):
 # Load data at startup
 dispatch_df = load_dispatch_data(DISPATCH_FILE_PATH)
 df = load_and_clean_lot_data(LOT_DATA_FILE_PATH)
-
-# Global list to store selected school IDs
-selected_schools = []
 
 @app.route('/')
 def home():
@@ -113,14 +103,10 @@ def search_dispatch():
         end_date = pd.to_datetime(end_date_input).date() if end_date_input else start_date
 
         # Filter data dynamically
-        # Ensure dispatched_date is converted to date type before filtering
-        dispatch_df['dispatched_date'] = pd.to_datetime(dispatch_df['dispatched_date']).dt.date
-
         date_filtered = dispatch_df[
-        (dispatch_df['dispatched_date'] >= start_date) & 
-        (dispatch_df['dispatched_date'] <= end_date)
+            (dispatch_df['dispatched_date'] >= start_date) &
+            (dispatch_df['dispatched_date'] <= end_date)
         ]
-
 
         # Apply additional filters
         if search_school_id:
@@ -156,52 +142,80 @@ def search_dispatch():
 
 @app.route('/check_lot_availability', methods=['GET', 'POST'])
 def check_lot_availability():
-    global selected_schools
+    selected_school_ids = request.form.getlist('selected_schools')  # Get selected School IDs
 
-    if not selected_schools:
-        return render_template("lot_availability.html", lot_records=[], selected_schools=[], message="No schools selected.")
+    if not selected_school_ids:
+        return render_template("lot_availability.html", lot_records=[], message="No schools selected.")
 
     # Merge dispatch and lot data on 'school_id'
-    dispatch_df['school_id'] = dispatch_df['school_id'].astype(str)
-    df['school_id'] = df['school_id'].astype(str)
-
     merged_df = pd.merge(dispatch_df, df, on="school_id", how="inner")
 
-
     # Filter based on selected school IDs
-    filtered_df = merged_df[merged_df['school_id'].astype(str).isin(selected_schools)]
+    filtered_df = merged_df[merged_df['school_id'].astype(str).isin(selected_school_ids)]
 
     if filtered_df.empty:
-        return render_template("lot_availability.html", lot_records=[], selected_schools=selected_schools, message="No matching lot availability found.")
+        return render_template("lot_availability.html", lot_records=[], message="No matching lot availability found.")
 
     # Extract relevant columns for display
     lot_records = filtered_df[['region_name_x', 'division_name_x', 'school_id', 'school_name_x', 'allocated_lots_numbers']].rename(
         columns={"region_name_x": "region_name", "division_name_x": "division_name", "school_name_x": "school_name"}
     ).to_dict(orient="records")
 
-    return render_template(
-        "lot_availability.html",
-        lot_records=lot_records,
-        selected_schools=selected_schools,
-        message=None
-    )
+    return render_template("lot_availability.html", lot_records=lot_records)
+
+
+
+# Initialize an empty DataFrame
+selected_schools_df = pd.DataFrame(columns=["school_id"])
+
+# Global variable to store selected schools
+selected_schools_df = pd.DataFrame(columns=['school_id', 'school_name', 'region_name', 'division_name'])
 
 @app.route('/save_selected_schools', methods=['POST'])
 def save_selected_schools():
-    global selected_schools
+    global selected_schools_df
     data = request.get_json()
+    
+    # Get the full school details from dispatch_df
     selected_ids = data.get('selected_schools', [])
     
-    # Update the global list with selected schools
-    selected_schools = selected_ids
+    # Filter dispatch_df to get only selected schools
+    new_selections = dispatch_df[dispatch_df['school_id'].astype(str).isin(selected_ids)][
+        ['school_id', 'school_name', 'region_name', 'division_name']
+    ].drop_duplicates()
     
-    return jsonify({'status': 'success', 'count': len(selected_schools)})
+    # Update the global DataFrame
+    selected_schools_df = pd.concat([
+        selected_schools_df,
+        new_selections
+    ]).drop_duplicates(subset=['school_id']).reset_index(drop=True)
+    
+    return jsonify({'status': 'success', 'count': len(selected_schools_df)})
+
+@app.route('/lot_availability')
+def lot_availability():
+    global selected_schools_df
+    
+    # Merge with lot data to get lot information
+    if not selected_schools_df.empty:
+        merged_data = pd.merge(
+            selected_schools_df,
+            df[['school_id', 'allocated_lots_numbers']],
+            on='school_id',
+            how='left'
+        )
+        schools_with_lots = merged_data.to_dict('records')
+    else:
+        schools_with_lots = []
+    
+    return render_template('lot_availability.html', lot_records=schools_with_lots)
 
 @app.route('/clear_selections', methods=['POST'])
 def clear_selections():
-    global selected_schools
-    selected_schools = []  # Clear the list
+    global selected_schools_df
+    selected_schools_df = selected_schools_df.iloc[0:0]  # Clear the DataFrame
     return jsonify({'status': 'success'})
 
+    
 if __name__ == '__main__':
     app.run(debug=True)

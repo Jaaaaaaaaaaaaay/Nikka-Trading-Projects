@@ -80,12 +80,6 @@
   </style>
 
   <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', storeCheckedSchools);
-    });
-});
-
 document.addEventListener("DOMContentLoaded", function () {
     let startDateInput = document.getElementById("start_date");
     let endDateInput = document.getElementById("end_date");
@@ -135,32 +129,13 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("filterForm").submit();
     }
 
+// Add this to your search_dispatch.html inside the <script> tags
 
-  function storeCheckedSchools() {
+    function storeCheckedSchools() {
     let checkedSchools = [];
     document.querySelectorAll('.school-checkbox:checked').forEach(checkbox => {
         checkedSchools.push(checkbox.value);
     });
-
-    fetch('/save_selected_schools', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ selected_schools: checkedSchools })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Server response:', data);
-        if (data.status === 'success') {
-            // Update button state
-            document.getElementById('checkLotButton').disabled = checkedSchools.length === 0;
-        }
-    })
-    .catch(error => {
-        console.error('Error saving schools:', error);
-    });
-}
     
     console.log('Attempting to store schools:', checkedSchools);  // Debug log
     
@@ -188,7 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .catch(error => {
         console.error('Error saving schools:', error);
     });
-
+}
 
 // Function to restore checked state when page loads
 function restoreCheckedState() {
@@ -314,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <!-- Top bar with Return to Search (if needed) -->
   <div class="top-bar">
     <button class="home-button" onclick="location.href='/'">Return to Home</button>
+    id="selectedCount" style="margin: 10px 0;">
   </div>
 
   <div class="container">
@@ -369,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="top-bar">
         <button id="checkLotButton" class="blue-btn" onclick="location.href='/check_lot_availability'" disabled>
           Check Lot Availability
-      </button>
+        </button>
         <button class="clear-btn" onclick="clearAllSelections()">Clear All Selected</button>
       </div>
 

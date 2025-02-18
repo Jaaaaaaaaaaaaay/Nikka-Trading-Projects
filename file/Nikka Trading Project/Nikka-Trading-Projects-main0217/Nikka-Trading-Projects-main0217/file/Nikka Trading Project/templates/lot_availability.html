@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lot Availability</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .buttons {
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lot Availability for Selected Schools</h1>
+        
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="location.href='/search_dispatch'">Back to Search</button>
+            <button class="btn btn-danger" onclick="clearSelections()">Clear All Selections</button>
+        </div>
+
+        {% if lot_records %}
+        <table>
+            <thead>
+                <tr>
+                    <th>School ID</th>
+                    <th>School Name</th>
+                    <th>Region</th>
+                    <th>Division</th>
+                    <th>Allocated Lots</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in lot_records %}
+                <tr>
+                    <td>{{ record.school_id }}</td>
+                    <td>{{ record.school_name }}</td>
+                    <td>{{ record.region_name }}</td>
+                    <td>{{ record.division_name }}</td>
+                    <td>{{ record.allocated_lots_numbers or 'No lots allocated' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            <h3>No schools selected</h3>
+            <p>Please return to the search page and select schools to view their lot availability.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function clearSelections() {
+            fetch('/clear_selections', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
